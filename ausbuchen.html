@@ -1,0 +1,560 @@
+{% extends "base.html" %}
+{% block title %}Ausbuchen{% endblock %}
+
+{% block content %}
+<div class="ausbuchen-container">
+
+  <!-- ── SCHRITT 1: Foto aufnehmen ── -->
+  <div id="step-1" class="step active">
+    <div class="step-header">
+      <span class="step-badge">1 / 3</span>
+      <h2>Teil fotografieren</h2>
+      <p class="step-hint">Nimm das Teil, das du entnehmen willst, aus der Kiste und fotografiere es.</p>
+    </div>
+
+    <div class="foto-preview-box" id="preview-box">
+      <div class="foto-placeholder" id="foto-placeholder">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+        <span>Noch kein Foto</span>
+      </div>
+      <img id="foto-vorschau" src="" alt="Vorschau" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:12px;">
+    </div>
+
+    <input type="file" id="foto-input" accept="image/*" capture="environment" style="display:none;">
+
+    <div class="btn-group-vertical">
+      <button class="btn btn-primary btn-lg" onclick="document.getElementById('foto-input').click()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+        Foto aufnehmen / wählen
+      </button>
+      <button class="btn btn-success btn-lg" id="btn-suchen" onclick="startSuche()" disabled>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        Im Inventar suchen
+      </button>
+    </div>
+  </div>
+
+  <!-- ── SCHRITT 2: Suche läuft ── -->
+  <div id="step-2" class="step" style="display:none;">
+    <div class="step-header">
+      <span class="step-badge">2 / 3</span>
+      <h2>KI analysiert…</h2>
+    </div>
+    <div class="loading-animation">
+      <div class="spinner-ring"></div>
+      <p id="loading-text">Teil wird erkannt…</p>
+    </div>
+  </div>
+
+  <!-- ── SCHRITT 3: Treffer anzeigen ── -->
+  <div id="step-3" class="step" style="display:none;">
+    <div class="step-header">
+      <span class="step-badge">3 / 3</span>
+      <h2>Treffer</h2>
+      <p class="step-hint" id="ki-beschreibung"></p>
+    </div>
+
+    <div id="treffer-liste"></div>
+
+    <div id="keine-treffer" style="display:none;" class="empty-state">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <p>Kein passendes Teil gefunden.</p>
+      <p class="hint">Versuch es mit einem klareren Foto oder suche manuell im Inventar.</p>
+    </div>
+
+    <div class="btn-group-vertical" style="margin-top: 1.5rem;">
+      <button class="btn btn-secondary" onclick="resetFlow()">
+        Neues Foto aufnehmen
+      </button>
+      <a href="/inventar" class="btn btn-ghost">Manuell im Inventar suchen</a>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Toast ── -->
+<div id="toast" class="toast" style="display:none;"></div>
+
+<style>
+.ausbuchen-container {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 1rem 1rem 6rem;
+}
+
+.step-header {
+  margin-bottom: 1.5rem;
+}
+
+.step-badge {
+  display: inline-block;
+  background: var(--color-accent, #e67e22);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.05em;
+}
+
+.step-header h2 {
+  margin: 0.25rem 0 0.25rem;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--color-text, #fff);
+}
+
+.step-hint {
+  color: var(--color-muted, #888);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+/* Foto Preview Box */
+.foto-preview-box {
+  width: 100%;
+  aspect-ratio: 4/3;
+  background: var(--color-surface2, #1e1e2e);
+  border: 2px dashed var(--color-border, #333);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+}
+
+.foto-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--color-muted, #666);
+  font-size: 0.9rem;
+}
+
+.foto-placeholder svg {
+  opacity: 0.4;
+}
+
+/* Buttons */
+.btn-group-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.85rem 1.25rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity 0.15s, transform 0.1s;
+}
+
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-primary  { background: var(--color-accent, #e67e22); color: #fff; }
+.btn-success  { background: #27ae60; color: #fff; }
+.btn-secondary{ background: var(--color-surface2, #2a2a3e); color: var(--color-text, #fff); border: 1px solid var(--color-border, #444); }
+.btn-ghost    { background: transparent; color: var(--color-muted, #888); font-size: 0.9rem; }
+.btn-ausbuchen{ background: #c0392b; color: #fff; padding: 0.65rem 1.1rem; font-size: 0.95rem; border-radius: 8px; white-space: nowrap; }
+.btn-ausbuchen:disabled { background: #555; }
+
+.btn-lg { padding: 1rem 1.25rem; font-size: 1.05rem; }
+
+/* Loading */
+.loading-animation {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 3rem 0;
+  color: var(--color-muted, #888);
+}
+
+.spinner-ring {
+  width: 56px;
+  height: 56px;
+  border: 4px solid var(--color-surface2, #2a2a3e);
+  border-top-color: var(--color-accent, #e67e22);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Treffer-Karte */
+.treffer-karte {
+  background: var(--color-surface2, #1e1e2e);
+  border: 1px solid var(--color-border, #333);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.treffer-karte.top-treffer {
+  border-color: #27ae60;
+}
+
+.treffer-top-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.treffer-info { flex: 1; }
+
+.treffer-name {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--color-text, #fff);
+  margin: 0 0 0.15rem;
+}
+
+.treffer-meta {
+  font-size: 0.8rem;
+  color: var(--color-muted, #888);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.tag {
+  background: var(--color-surface, #111);
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.75rem;
+}
+
+.treffer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.25rem;
+}
+
+.menge-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.menge-control button {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border, #444);
+  background: var(--color-surface, #111);
+  color: var(--color-text, #fff);
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.menge-display {
+  font-size: 1rem;
+  font-weight: 700;
+  min-width: 2rem;
+  text-align: center;
+  color: var(--color-text, #fff);
+}
+
+.konfidenz-bar {
+  height: 3px;
+  background: var(--color-surface, #111);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 0.5rem;
+}
+
+.konfidenz-fill {
+  height: 100%;
+  background: #27ae60;
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+
+/* Empty state */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 2.5rem 1rem;
+  color: var(--color-muted, #666);
+  text-align: center;
+}
+
+.empty-state p { margin: 0; }
+.empty-state .hint { font-size: 0.85rem; }
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 5.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #27ae60;
+  color: #fff;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  z-index: 1000;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  white-space: nowrap;
+}
+
+.toast.error { background: #c0392b; }
+</style>
+
+<script>
+let fotoFile = null;
+let loadingTexts = [
+  "Teil wird erkannt…",
+  "Inventar wird durchsucht…",
+  "Treffer werden bewertet…",
+];
+let loadingIdx = 0;
+let loadingInterval = null;
+
+// Foto-Input Listener
+document.getElementById('foto-input').addEventListener('change', function(e) {
+  if (e.target.files && e.target.files[0]) {
+    fotoFile = e.target.files[0];
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      const vorschau = document.getElementById('foto-vorschau');
+      const placeholder = document.getElementById('foto-placeholder');
+      vorschau.src = ev.target.result;
+      vorschau.style.display = 'block';
+      placeholder.style.display = 'none';
+    };
+    reader.readAsDataURL(fotoFile);
+    document.getElementById('btn-suchen').disabled = false;
+  }
+});
+
+function showStep(n) {
+  [1, 2, 3].forEach(i => {
+    const el = document.getElementById('step-' + i);
+    if (el) el.style.display = i === n ? 'block' : 'none';
+  });
+}
+
+function startLoadingAnimation() {
+  loadingIdx = 0;
+  document.getElementById('loading-text').textContent = loadingTexts[0];
+  loadingInterval = setInterval(() => {
+    loadingIdx = (loadingIdx + 1) % loadingTexts.length;
+    document.getElementById('loading-text').textContent = loadingTexts[loadingIdx];
+  }, 1800);
+}
+
+function stopLoadingAnimation() {
+  clearInterval(loadingInterval);
+}
+
+async function startSuche() {
+  if (!fotoFile) return;
+
+  showStep(2);
+  startLoadingAnimation();
+
+  const formData = new FormData();
+  formData.append('foto', fotoFile);
+
+  try {
+    const resp = await fetch('/api/visual-search', {
+      method: 'POST',
+      body: formData,
+    });
+    const data = await resp.json();
+    stopLoadingAnimation();
+
+    if (data.error) {
+      showToast('Fehler: ' + data.message, true);
+      showStep(1);
+      return;
+    }
+
+    renderTreffer(data);
+    showStep(3);
+
+  } catch (err) {
+    stopLoadingAnimation();
+    showToast('Netzwerkfehler', true);
+    showStep(1);
+  }
+}
+
+function renderTreffer(data) {
+  const liste = document.getElementById('treffer-liste');
+  const keiner = document.getElementById('keine-treffer');
+  const beschreibung = document.getElementById('ki-beschreibung');
+
+  // Beschreibung
+  if (data.beschreibung) {
+    beschreibung.textContent = '🔍 ' + data.beschreibung;
+  }
+
+  liste.innerHTML = '';
+
+  if (!data.treffer || data.treffer.length === 0) {
+    keiner.style.display = 'flex';
+    return;
+  }
+
+  keiner.style.display = 'none';
+
+  data.treffer.forEach((t, idx) => {
+    const konfProzent = Math.round((t.konfidenz || 0) * 100);
+    const isTop = idx === 0;
+
+    const karte = document.createElement('div');
+    karte.className = 'treffer-karte' + (isTop ? ' top-treffer' : '');
+    karte.innerHTML = `
+      <div class="treffer-top-row">
+        <div class="treffer-info">
+          <p class="treffer-name">${escHtml(t.name)}</p>
+          <div class="treffer-meta">
+            ${t.kategorie ? `<span class="tag">${escHtml(t.kategorie)}</span>` : ''}
+            ${t.groesse ? `<span class="tag">${escHtml(t.groesse)}</span>` : ''}
+            ${t.standort_name ? `<span class="tag">📍 ${escHtml(t.standort_name)}${t.behaelter_name ? ' / ' + escHtml(t.behaelter_name) : ''}</span>` : ''}
+          </div>
+        </div>
+      </div>
+      ${t.begruendung ? `<p style="font-size:0.8rem; color:var(--color-muted,#888); margin:0;">${escHtml(t.begruendung)}</p>` : ''}
+      <div class="konfidenz-bar">
+        <div class="konfidenz-fill" style="width:${konfProzent}%; background:${konfProzent >= 70 ? '#27ae60' : konfProzent >= 40 ? '#f39c12' : '#e74c3c'}"></div>
+      </div>
+      <div class="treffer-footer">
+        <span style="font-size:0.85rem; color:var(--color-muted,#888);">
+          Lagerbestand: <strong style="color:var(--color-text,#fff);">${t.menge} ${escHtml(t.einheit)}</strong>
+        </span>
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <div class="menge-control">
+            <button onclick="changeMenge('${t.item_id}', -1)" title="Weniger">−</button>
+            <span class="menge-display" id="menge-${t.item_id}">1</span>
+            <button onclick="changeMenge('${t.item_id}', 1)" title="Mehr">+</button>
+          </div>
+          <button class="btn-ausbuchen" id="btn-ab-${t.item_id}" onclick="ausbuchen('${t.item_id}', '${escHtml(t.name)}', ${t.menge})">
+            − Ausbuchen
+          </button>
+        </div>
+      </div>
+    `;
+    liste.appendChild(karte);
+  });
+}
+
+// Mengensteuerung pro Item
+const mengen = {};
+
+function getMenge(itemId) {
+  return mengen[itemId] || 1;
+}
+
+function changeMenge(itemId, delta) {
+  const current = getMenge(itemId);
+  const neu = Math.max(1, current + delta);
+  mengen[itemId] = neu;
+  const el = document.getElementById('menge-' + itemId);
+  if (el) el.textContent = neu;
+}
+
+async function ausbuchen(itemId, name, lagerbestand) {
+  const menge = getMenge(itemId);
+  if (menge > lagerbestand) {
+    showToast(`Nur ${lagerbestand} ${name} vorhanden`, true);
+    return;
+  }
+
+  const btn = document.getElementById('btn-ab-' + itemId);
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+
+  try {
+    const resp = await fetch(`/api/items/${itemId}/ausbuchen`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ menge }),
+    });
+    const data = await resp.json();
+
+    if (data.success) {
+      showToast(`✓ ${name} – ${menge}× ausgebucht (${data.neue_menge} verbleibend)`);
+      // Lagerbestand im UI aktualisieren
+      const footer = btn.closest('.treffer-karte').querySelector('strong');
+      if (footer) footer.textContent = `${data.neue_menge} ${data.einheit}`;
+      if (btn) {
+        btn.textContent = '✓ Ausgebucht';
+        btn.style.background = '#555';
+      }
+    } else {
+      showToast('Fehler beim Ausbuchen', true);
+      if (btn) { btn.disabled = false; btn.textContent = '− Ausbuchen'; }
+    }
+  } catch (err) {
+    showToast('Netzwerkfehler', true);
+    if (btn) { btn.disabled = false; btn.textContent = '− Ausbuchen'; }
+  }
+}
+
+function resetFlow() {
+  fotoFile = null;
+  document.getElementById('foto-input').value = '';
+  document.getElementById('foto-vorschau').style.display = 'none';
+  document.getElementById('foto-placeholder').style.display = 'flex';
+  document.getElementById('btn-suchen').disabled = true;
+  document.getElementById('treffer-liste').innerHTML = '';
+  document.getElementById('keine-treffer').style.display = 'none';
+  document.getElementById('ki-beschreibung').textContent = '';
+  showStep(1);
+}
+
+function showToast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (isError ? ' error' : '');
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 3500);
+}
+
+function escHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+</script>
+{% endblock %}
