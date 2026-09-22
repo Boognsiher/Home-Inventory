@@ -1,0 +1,21 @@
+services:
+  werkstatt-inventar:
+    build: .
+    # Alternativ, falls kein lokaler Build gewünscht ist (z. B. auf dem NAS
+    # per Container Manager/Portainer ohne Build-Kontext):
+    # image: ghcr.io/<dein-github-user>/werkstatt-inventar:latest
+    container_name: werkstatt-inventar
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    environment:
+      - DATA_DIR=/app/data
+    volumes:
+      # Ein einziges Verzeichnis auf dem NAS für alles Persistente:
+      # inventory.json, hochgeladene Fotos, ZIP-Backups.
+      - ./data:/app/data
+    # Optional, falls der NAS-Nutzer keine Root-Container-Prozesse mag
+    # oder es Berechtigungsprobleme mit dem gemounteten Ordner gibt:
+    # user: "1000:1000"

@@ -1,0 +1,15 @@
+.git
+.gitignore
+.env
+data/
+backups/
+static/uploads/*
+!static/uploads/.gitkeep
+__pycache__
+*.pyc
+.venv
+venv
+.pytest_cache
+tests/
+README.md
+CLAUDE.md

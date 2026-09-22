@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ standort.name }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb"><a href="{{ url_for('standorte_liste') }}">← Standorte</a></div>
+<h1>{{ standort.name }}</h1>
+{% if standort.beschreibung %}<p class="page-hint">{{ standort.beschreibung }}</p>{% endif %}
+
+<h2>Behälter</h2>
+{% if behaelter %}
+  {% for b in behaelter %}
+    <a href="{{ url_for('behaelter_detail', bid=b.id) }}" class="card card-row">
+      <div>
+        <div class="card-title">{{ b.name }}</div>
+        {% if b.beschreibung %}<div class="card-meta">{{ b.beschreibung }}</div>{% endif %}
+      </div>
+      <span class="tag">{{ item_anzahl.get(b.id, 0) }} Items</span>
+    </a>
+  {% endfor %}
+{% else %}
+  <div class="empty-state"><p>Noch keine Behälter in diesem Standort.</p></div>
+{% endif %}
+
+<h2>Neuer Behälter</h2>
+<form method="post" action="{{ url_for('behaelter_neu') }}" class="form-card">
+  <input type="hidden" name="standort_id" value="{{ standort.id }}">
+  <label for="b-name">Name</label>
+  <input type="text" id="b-name" name="name" required placeholder="z. B. Kiste 3 / Schublade B">
+
+  <label for="b-beschreibung">Beschreibung (optional)</label>
+  <textarea id="b-beschreibung" name="beschreibung" placeholder="z. B. Inhalt, Gridfinity-Raster"></textarea>
+
+  <button type="submit" class="btn btn-primary" style="margin-top: 1rem; width: 100%;">Behälter anlegen</button>
+</form>
+
+<form method="post" action="{{ url_for('standort_loeschen', sid=standort.id) }}" onsubmit="return confirm('Standort wirklich löschen?');" style="margin-top: 1.5rem;">
+  <button type="submit" class="btn btn-ghost btn-sm">Standort löschen</button>
+</form>
+{% endblock %}

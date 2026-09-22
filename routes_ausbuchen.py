@@ -1,22 +1,34 @@
-# ============================================================
-# PATCH: Visual Search + Ausbuchen
-# Diese Routen in app.py einfügen (z.B. vor dem Fehlerbehandlungs-Block)
-# ============================================================
+"""Visuelle Suche & Checkout ("Ausbuchen"): Foto -> Claude Haiku identifiziert
+das Teil -> Abgleich mit Live-Inventar -> direktes Ausbuchen der Menge.
 
-# ---------------------------------------------------------------------------
-# Visual Search – Foto → KI → Inventar-Treffer
-# ---------------------------------------------------------------------------
+KI-Funktion ist reine Assistenz: die/der Nutzer:in bestätigt den Treffer und
+die Menge manuell, es wird nichts automatisch ausgebucht.
+"""
 
-@app.route("/ausbuchen")
+import base64
+import json
+import re
+from datetime import datetime
+from io import BytesIO
+
+from flask import Blueprint, jsonify, render_template, request
+
+from config import Config
+from db import open_db
+
+bp = Blueprint("ausbuchen", __name__)
+
+
+@bp.route("/ausbuchen")
 def ausbuchen_page():
-    """Seite: Foto aufnehmen → Teil finden → ausbuchen"""
+    """Seite: Foto aufnehmen -> Teil finden -> ausbuchen"""
     return render_template("ausbuchen.html")
 
 
-@app.route("/api/visual-search", methods=["POST"])
+@bp.route("/api/visual-search", methods=["POST"])
 def visual_search():
     """
-    Foto hochladen → Claude analysiert → matched gegen Inventar.
+    Foto hochladen -> Claude analysiert -> matched gegen Inventar.
     Gibt Top-Treffer mit Item-IDs zurück.
     """
     if "foto" not in request.files:
@@ -26,17 +38,20 @@ def visual_search():
     if not foto or foto.filename == "":
         return jsonify({"error": True, "message": "Leeres Foto"}), 400
 
+    if not Config.ANTHROPIC_API_KEY:
+        return jsonify({
+            "error": True,
+            "message": "Kein ANTHROPIC_API_KEY konfiguriert (siehe .env)",
+        }), 500
+
     try:
-        import anthropic, base64
-        from io import BytesIO
+        import anthropic
         from PIL import Image as PILImage
 
-        # Bild laden + komprimieren
         img = PILImage.open(foto.stream)
         if img.mode in ("RGBA", "P"):
             img = img.convert("RGB")
 
-        # Max 1200px, Qualität 80
         max_size = 1200
         if max(img.size) > max_size:
             img.thumbnail((max_size, max_size), PILImage.LANCZOS)
@@ -45,18 +60,16 @@ def visual_search():
         img.save(buf, format="JPEG", quality=80)
         img_b64 = base64.standard_b64encode(buf.getvalue()).decode("utf-8")
 
-        # Alle Items aus DB laden
         with open_db() as db:
             items = list(db["items"].values())
 
         if not items:
             return jsonify({"treffer": [], "beschreibung": "Keine Items im Inventar"})
 
-        # Inventar-Liste für KI vorbereiten (nur relevante Felder)
         inventar_liste = []
         for it in items:
             menge = it.get("menge", 0)
-            if menge > 0:  # Nur Items die noch vorhanden sind
+            if menge > 0:
                 inventar_liste.append({
                     "id": it["id"],
                     "name": it.get("name", ""),
@@ -69,7 +82,6 @@ def visual_search():
 
         inventar_json = json.dumps(inventar_liste, ensure_ascii=False)
 
-        # KI-Prompt
         system_prompt = """Du bist ein Werkzeug-Erkennungssystem für eine Werkstatt-Inventar-App.
 Analysiere das Foto und vergleiche es mit dem Inventar.
 Antworte NUR mit einem JSON-Objekt, ohne Markdown-Backticks, ohne Erklärungen.
@@ -118,19 +130,15 @@ Regeln:
 
         raw = response.content[0].text.strip()
 
-        # JSON parsen
         try:
             result = json.loads(raw)
         except json.JSONDecodeError:
-            # Fallback: JSON aus Text extrahieren
-            import re
             match = re.search(r'\{.*\}', raw, re.DOTALL)
             if match:
                 result = json.loads(match.group())
             else:
                 return jsonify({"error": True, "message": "KI-Antwort konnte nicht geparst werden", "raw": raw}), 500
 
-        # Treffer mit vollständigen Item-Daten anreichern
         treffer_angereichert = []
         with open_db() as db:
             for treffer in result.get("treffer", []):
@@ -159,18 +167,22 @@ Regeln:
         })
 
     except Exception as e:
-        app.logger.error(f"Visual search error: {e}")
+        from flask import current_app
+        current_app.logger.error(f"Visual search error: {e}")
         return jsonify({"error": True, "message": str(e)}), 500
 
 
-@app.route("/api/items/<item_id>/ausbuchen", methods=["POST"])
+@bp.route("/api/items/<item_id>/ausbuchen", methods=["POST"])
 def ausbuchen_item(item_id):
     """
     Menge um X reduzieren (Standard: 1).
     Body (JSON, optional): { "menge": 2 }
     """
     data = request.get_json(silent=True) or {}
-    menge_ausbuchen = int(data.get("menge", 1))
+    try:
+        menge_ausbuchen = int(data.get("menge", 1))
+    except (TypeError, ValueError):
+        menge_ausbuchen = 1
 
     with open_db() as db:
         item = db["items"].get(item_id)
@@ -181,12 +193,13 @@ def ausbuchen_item(item_id):
         item["menge"] = neue_menge
         item["aktualisiert"] = datetime.now().isoformat()
         db["items"][item_id] = item
-        save_db(db)
 
-    return jsonify({
-        "success": True,
-        "item_id": item_id,
-        "name": item.get("name"),
-        "neue_menge": neue_menge,
-        "einheit": item.get("einheit", "Stk"),
-    })
+        antwort = {
+            "success": True,
+            "item_id": item_id,
+            "name": item.get("name"),
+            "neue_menge": neue_menge,
+            "einheit": item.get("einheit", "Stk"),
+        }
+
+    return jsonify(antwort)

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Item bearbeiten' if item else 'Neues Item' }}{% endblock %}
+
+{% block content %}
+<h1>{{ 'Item bearbeiten' if item else 'Neues Item' }}</h1>
+
+<form method="post" enctype="multipart/form-data" class="form-card">
+  <label for="name">Name *</label>
+  <input type="text" id="name" name="name" required value="{{ item.name if item else '' }}">
+
+  <label for="behaelter_id">Behälter *</label>
+  <select id="behaelter_id" name="behaelter_id" required>
+    <option value="" disabled {{ 'selected' if not vorausgewaehlter_behaelter }}>-- wählen --</option>
+    {% for b in alle_behaelter %}
+      {% set s = standort_map.get(b.standort_id, {}) %}
+      <option value="{{ b.id }}" {{ 'selected' if b.id == vorausgewaehlter_behaelter }}>
+        {{ s.name }} / {{ b.name }}
+      </option>
+    {% endfor %}
+  </select>
+
+  <label for="kategorie">Kategorie</label>
+  <input type="text" id="kategorie" name="kategorie" value="{{ item.kategorie if item else '' }}" placeholder="z. B. Schrauben, Elektronik">
+
+  <label for="gridfinity_zelle">Gridfinity-Zelle (optional)</label>
+  <input type="text" id="gridfinity_zelle" name="gridfinity_zelle" value="{{ item.gridfinity_zelle if item else '' }}" placeholder="z. B. A1">
+
+  <div class="btn-row">
+    <div style="flex: 1;">
+      <label for="menge">Menge</label>
+      <input type="number" id="menge" name="menge" min="0" value="{{ item.menge if item else 0 }}">
+    </div>
+    <div style="flex: 1;">
+      <label for="einheit">Einheit</label>
+      <input type="text" id="einheit" name="einheit" value="{{ item.einheit if item else 'Stk' }}">
+    </div>
+  </div>
+
+  <label for="groesse">Größe / Variante</label>
+  <input type="text" id="groesse" name="groesse" value="{{ item.groesse if item else '' }}" placeholder="z. B. M4x20">
+
+  <label for="notizen">Notizen</label>
+  <textarea id="notizen" name="notizen">{{ item.notizen if item else '' }}</textarea>
+
+  <label for="aliexpress_link">AliExpress-Link (optional)</label>
+  <input type="text" id="aliexpress_link" name="aliexpress_link" value="{{ item.aliexpress_link if item else '' }}">
+
+  <label for="foto">Foto {{ '(neues Foto ersetzt das alte)' if item else '(optional)' }}</label>
+  <input type="file" id="foto" name="foto" accept="image/*" capture="environment">
+
+  <button type="submit" class="btn btn-primary" style="margin-top: 1.25rem; width: 100%;">
+    {{ 'Speichern' if item else 'Item anlegen' }}
+  </button>
+</form>
+{% endblock %}

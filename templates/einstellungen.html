@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Einstellungen{% endblock %}
+
+{% block content %}
+<h1>Einstellungen</h1>
+
+<h2>Status</h2>
+<ul class="settings-list">
+  <li><span>Standorte / Behälter / Items</span> <span>{{ anzahl_standorte }} / {{ anzahl_behaelter }} / {{ anzahl_items }}</span></li>
+  <li><span>Anthropic API Key</span>
+    <span class="{{ 'status-ok' if api_key_gesetzt else 'status-bad' }}">
+      {{ 'gesetzt' if api_key_gesetzt else 'fehlt (siehe .env)' }}
+    </span>
+  </li>
+  <li><span>Letztes Backup</span> <span>{{ letztes_backup | datum }}</span></li>
+  <li><span>Ungesicherte Änderungen</span>
+    <span class="{{ 'status-warn' if aenderung_seit_backup else 'status-ok' }}">
+      {{ 'ja' if aenderung_seit_backup else 'nein' }}
+    </span>
+  </li>
+  <li><span>Automatisches Backup</span> <span>täglich um {{ '%02d'|format(backup_stunde) }}:00 Uhr (bei Änderung)</span></li>
+  <li><span>Aufbewahrte Backups</span> <span>letzte {{ backup_keep }}</span></li>
+  <li><span>Datenverzeichnis</span> <span style="font-size: 0.78rem;">{{ data_dir }}</span></li>
+</ul>
+
+<form method="post" action="{{ url_for('verwaltung.backup_erstellen') }}">
+  <button type="submit" class="btn btn-primary" style="width: 100%;">Backup jetzt erstellen</button>
+</form>
+
+<h2>Export</h2>
+<div class="btn-group-vertical">
+  <a href="{{ url_for('verwaltung.export_json') }}" class="btn btn-secondary">Als JSON exportieren</a>
+  <a href="{{ url_for('verwaltung.export_xlsx') }}" class="btn btn-secondary">Als XLSX exportieren</a>
+</div>
+
+<h2>Backups ({{ backups|length }})</h2>
+{% if backups %}
+  <ul class="backup-list">
+    {% for b in backups %}
+      <li>
+        <span>{{ b.erstellt.strftime('%d.%m.%Y %H:%M') }} · {{ b.groesse_kb }} KB</span>
+        <a href="{{ url_for('verwaltung.backup_herunterladen', dateiname=b.name) }}">Download</a>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p class="page-hint">Noch keine Backups vorhanden.</p>
+{% endif %}
+{% endblock %}

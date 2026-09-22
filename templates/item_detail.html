@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ item.name }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb"><a href="{{ url_for('behaelter_detail', bid=behaelter.id) }}">← {{ behaelter.name }}</a></div>
+
+{% if item.foto %}
+  <img src="{{ url_for('uploads', dateiname=item.foto) }}" class="item-thumb" alt="{{ item.name }}">
+{% endif %}
+
+<h1>{{ item.name }}</h1>
+<div class="card-meta" style="margin-bottom: 1rem;">
+  {% if item.kategorie %}<span class="tag">{{ item.kategorie }}</span>{% endif %}
+  {% if item.groesse %}<span class="tag">{{ item.groesse }}</span>{% endif %}
+  {% if item.gridfinity_zelle %}<span class="tag">Zelle {{ item.gridfinity_zelle }}</span>{% endif %}
+  <span class="tag">📍 {{ standort.name }} / {{ behaelter.name }}</span>
+</div>
+
+<div class="stat-grid" style="grid-template-columns: 1fr;">
+  <div class="stat-box">
+    <div class="stat-value">{{ item.menge }} {{ item.einheit }}</div>
+    <div class="stat-label">Aktueller Lagerbestand</div>
+  </div>
+</div>
+
+{% if item.notizen %}
+  <h2>Notizen</h2>
+  <p>{{ item.notizen }}</p>
+{% endif %}
+
+{% if item.aliexpress_link %}
+  <p><a href="{{ item.aliexpress_link }}" target="_blank" rel="noopener">🔗 AliExpress-Link</a></p>
+{% endif %}
+
+<p class="page-hint">Angelegt: {{ item.erstellt | datum }} · Aktualisiert: {{ item.aktualisiert | datum }}</p>
+
+<div class="btn-group-vertical" style="margin-top: 1rem;">
+  <a href="{{ url_for('item_bearbeiten', iid=item.id) }}" class="btn btn-secondary">Bearbeiten</a>
+  <form method="post" action="{{ url_for('item_loeschen', iid=item.id) }}" onsubmit="return confirm('Item wirklich löschen?');">
+    <button type="submit" class="btn btn-ghost" style="width:100%;">Item löschen</button>
+  </form>
+</div>
+{% endblock %}

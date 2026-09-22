@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Import-Vorschau{% endblock %}
+
+{% block content %}
+<h1>Import-Vorschau</h1>
+<p class="page-hint">
+  {{ zeilen|length }} Zeile(n) gefunden. Häkchen setzen, Felder bei Bedarf korrigieren und für
+  jede Zeile einen Behälter wählen - ohne Behälter wird die Zeile nicht übernommen.
+</p>
+
+<form method="post" action="{{ url_for('import_csv.import_bestaetigen') }}">
+  <input type="hidden" name="upload_id" value="{{ upload_id }}">
+
+  <div class="import-table-wrap">
+    <table class="import-table">
+      <thead>
+        <tr>
+          <th>✓</th>
+          <th>Name</th>
+          <th>Kategorie</th>
+          <th>Menge</th>
+          <th>Variante</th>
+          <th>Behälter</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for idx, zeile in zeilen %}
+          <tr>
+            <td><input type="checkbox" name="uebernehmen_{{ idx }}" checked></td>
+            <td><input type="text" name="name_{{ idx }}" value="{{ zeile.name }}"></td>
+            <td><input type="text" name="kategorie_{{ idx }}" value="{{ zeile.kategorie_vorschlag }}"></td>
+            <td><input type="number" name="menge_{{ idx }}" min="1" value="{{ zeile.menge }}"></td>
+            <td><input type="text" name="variante_{{ idx }}" value="{{ zeile.variante }}"></td>
+            <td>
+              <select name="behaelter_{{ idx }}">
+                <option value="">-- keiner --</option>
+                {% for b in alle_behaelter %}
+                  {% set s = standort_map.get(b.standort_id, {}) %}
+                  <option value="{{ b.id }}">{{ s.name }} / {{ b.name }}</option>
+                {% endfor %}
+              </select>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <button type="submit" class="btn btn-primary" style="width: 100%;">Ausgewählte Items importieren</button>
+</form>
+{% endblock %}

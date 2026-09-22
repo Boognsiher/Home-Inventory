@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Start{% endblock %}
+
+{% block content %}
+<h1>Übersicht</h1>
+<p class="page-hint">Standort → Behälter → optional Gridfinity-Unterkategorie → Item</p>
+
+<div class="stat-grid">
+  <div class="stat-box">
+    <div class="stat-value">{{ anzahl_standorte }}</div>
+    <div class="stat-label">Standorte</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-value">{{ anzahl_behaelter }}</div>
+    <div class="stat-label">Behälter</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-value">{{ anzahl_items }}</div>
+    <div class="stat-label">Items</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-value">{{ gesamtmenge }}</div>
+    <div class="stat-label">Gesamtmenge</div>
+  </div>
+</div>
+
+<div class="btn-group-vertical" style="margin-bottom: 1.5rem;">
+  <a href="{{ url_for('ausbuchen.ausbuchen_page') }}" class="btn btn-success btn-lg">📷 Foto → Ausbuchen</a>
+  <a href="{{ url_for('item_neu') }}" class="btn btn-primary">+ Item manuell anlegen</a>
+  <a href="{{ url_for('import_csv.import_upload_seite') }}" class="btn btn-secondary">AliExpress-CSV importieren</a>
+</div>
+
+<h2>Zuletzt aktualisiert</h2>
+{% if letzte_items %}
+  {% for item in letzte_items %}
+    <a href="{{ url_for('item_detail', iid=item.id) }}" class="card card-row">
+      <div>
+        <div class="card-title">{{ item.name }}</div>
+        <div class="card-meta">
+          {% if item.kategorie %}<span class="tag">{{ item.kategorie }}</span>{% endif %}
+          <span class="tag">{{ item.menge }} {{ item.einheit }}</span>
+        </div>
+      </div>
+      <span style="color: var(--color-muted); font-size: 0.8rem;">{{ item.aktualisiert | datum }}</span>
+    </a>
+  {% endfor %}
+{% else %}
+  <div class="empty-state">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+    <p>Noch keine Items im Inventar.</p>
+  </div>
+{% endif %}
+{% endblock %}

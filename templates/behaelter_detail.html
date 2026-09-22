@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ behaelter.name }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb"><a href="{{ url_for('standort_detail', sid=standort.id) }}">← {{ standort.name }}</a></div>
+<h1>{{ behaelter.name }}</h1>
+{% if behaelter.beschreibung %}<p class="page-hint">{{ behaelter.beschreibung }}</p>{% endif %}
+
+<div class="qr-box">
+  <img src="{{ url_for('behaelter_qr', bid=behaelter.id) }}" alt="QR-Code für {{ behaelter.name }}">
+  <span class="page-hint" style="margin:0;">QR-Code am Behälter anbringen - führt direkt zu dieser Seite</span>
+  <a href="{{ url_for('behaelter_qr', bid=behaelter.id) }}" download="qr_{{ behaelter.name }}.png" class="btn btn-secondary btn-sm">QR-Code herunterladen</a>
+</div>
+
+<div class="btn-row" style="margin-bottom: 1rem;">
+  <a href="{{ url_for('item_neu', behaelter_id=behaelter.id) }}" class="btn btn-primary">+ Item hinzufügen</a>
+</div>
+
+<h2>Items</h2>
+{% if items %}
+  {% for it in items %}
+    <a href="{{ url_for('item_detail', iid=it.id) }}" class="card card-row">
+      <div style="display:flex; align-items:center; gap:0.75rem;">
+        {% if it.foto %}
+          <img src="{{ url_for('uploads', dateiname=it.foto) }}" class="item-thumb-sm" alt="">
+        {% endif %}
+        <div>
+          <div class="card-title">{{ it.name }}</div>
+          <div class="card-meta">
+            {% if it.kategorie %}<span class="tag">{{ it.kategorie }}</span>{% endif %}
+            {% if it.gridfinity_zelle %}<span class="tag">Zelle {{ it.gridfinity_zelle }}</span>{% endif %}
+          </div>
+        </div>
+      </div>
+      <span class="tag">{{ it.menge }} {{ it.einheit }}</span>
+    </a>
+  {% endfor %}
+{% else %}
+  <div class="empty-state"><p>Noch keine Items in diesem Behälter.</p></div>
+{% endif %}
+
+<form method="post" action="{{ url_for('behaelter_loeschen', bid=behaelter.id) }}" onsubmit="return confirm('Behälter wirklich löschen?');" style="margin-top: 1.5rem;">
+  <button type="submit" class="btn btn-ghost btn-sm">Behälter löschen</button>
+</form>
+{% endblock %}

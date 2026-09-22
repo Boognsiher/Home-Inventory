@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}CSV-Import{% endblock %}
+
+{% block content %}
+<h1>AliExpress-CSV-Import</h1>
+<p class="page-hint">
+  Exportiere deine Bestellungen bei AliExpress als CSV und lade sie hier hoch.
+  Im nächsten Schritt kannst du jede Zeile prüfen, bearbeiten und einem Behälter zuordnen -
+  nur ausgewählte Zeilen mit gültigem Behälter werden übernommen.
+</p>
+
+<form method="post" action="{{ url_for('import_csv.import_hochladen') }}" enctype="multipart/form-data" class="form-card">
+  <label for="csv_datei">CSV-Datei</label>
+  <input type="file" id="csv_datei" name="csv_datei" accept=".csv" required>
+
+  <button type="submit" class="btn btn-primary" style="margin-top: 1.25rem; width: 100%;">Hochladen & Vorschau</button>
+</form>
+{% endblock %}

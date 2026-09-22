@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Standorte{% endblock %}
+
+{% block content %}
+<h1>Standorte</h1>
+<p class="page-hint">Oberste Ebene der Hierarchie - z. B. „Werkstatt Regal 1“ oder „Keller“.</p>
+
+{% if standorte %}
+  {% for s in standorte %}
+    <a href="{{ url_for('standort_detail', sid=s.id) }}" class="card card-row">
+      <div>
+        <div class="card-title">{{ s.name }}</div>
+        {% if s.beschreibung %}<div class="card-meta">{{ s.beschreibung }}</div>{% endif %}
+      </div>
+      <span class="tag">{{ behaelter_anzahl.get(s.id, 0) }} Behälter</span>
+    </a>
+  {% endfor %}
+{% else %}
+  <div class="empty-state">
+    <p>Noch keine Standorte angelegt.</p>
+  </div>
+{% endif %}
+
+<h2>Neuer Standort</h2>
+<form method="post" action="{{ url_for('standort_neu') }}" class="form-card">
+  <label for="name">Name</label>
+  <input type="text" id="name" name="name" required placeholder="z. B. Werkstatt Regal 1">
+
+  <label for="beschreibung">Beschreibung (optional)</label>
+  <textarea id="beschreibung" name="beschreibung" placeholder="z. B. Raum, Ecke, Beschreibung"></textarea>
+
+  <button type="submit" class="btn btn-primary" style="margin-top: 1rem; width: 100%;">Standort anlegen</button>
+</form>
+{% endblock %}
