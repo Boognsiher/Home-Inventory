@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>Anmelden · Werkstatt Inventar</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <main class="app-main" style="padding-top: 3rem;">
+    <h1 style="text-align:center;">🔧 Werkstatt Inventar</h1>
+    <p class="page-hint" style="text-align:center;">Bitte anmelden</p>
+
+    {% if fehler %}
+      <div class="flash-stack"><div class="flash flash-error">{{ fehler }}</div></div>
+    {% endif %}
+
+    <form method="post" class="form-card">
+      <label for="passwort">Passwort</label>
+      <input type="password" id="passwort" name="passwort" autofocus required>
+      <button type="submit" class="btn btn-primary" style="margin-top: 1.25rem; width: 100%;">Anmelden</button>
+    </form>
+  </main>
+</body>
+</html>

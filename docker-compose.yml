@@ -19,3 +19,32 @@ services:
     # Optional, falls der NAS-Nutzer keine Root-Container-Prozesse mag
     # oder es Berechtigungsprobleme mit dem gemounteten Ordner gibt:
     # user: "1000:1000"
+
+  # Optionaler HTTPS-Reverse-Proxy für den Zugriff aus dem Internet.
+  # Holt sich automatisch ein Let's-Encrypt-Zertifikat für PUBLIC_DOMAIN
+  # (aus .env) - dafür müssen Port 80 + 443 am Router auf den NAS
+  # weitergeleitet sein und PUBLIC_DOMAIN muss auf die öffentliche IP zeigen.
+  #
+  # Start nur bei Bedarf: docker compose --profile public up -d --build
+  # (ohne --profile public bleibt die App weiterhin nur im Heimnetz auf
+  # Port 5000 erreichbar, wie bisher)
+  caddy:
+    image: caddy:2-alpine
+    container_name: werkstatt-inventar-caddy
+    profiles: ["public"]
+    restart: unless-stopped
+    depends_on:
+      - werkstatt-inventar
+    ports:
+      - "80:80"
+      - "443:443"
+    env_file:
+      - .env
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

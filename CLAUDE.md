@@ -29,6 +29,7 @@ Diese Datei gibt Claude Code Kontext, wenn im Repo gearbeitet wird.
 - `routes_import.py` — Blueprint: CSV-Import-Flow
 - `routes_verwaltung.py` — Blueprint: Export (JSON/XLSX), Backup, `/einstellungen`
 - `templates/`, `static/css/style.css` — Jinja2-Templates, mobile-first CSS
+- `Caddyfile` + `caddy`-Service in `docker-compose.yml` (Profil `public`) — optionaler HTTPS-Reverse-Proxy für Internet-Zugriff, holt automatisch Let's-Encrypt-Zertifikat für `PUBLIC_DOMAIN`
 - `tests/` — pytest, nutzt `DATA_DIR` in einem temporären Verzeichnis (siehe `tests/conftest.py`)
 
 ## Architektur / Kernfunktionen
@@ -37,6 +38,7 @@ Diese Datei gibt Claude Code Kontext, wenn im Repo gearbeitet wird.
 - **Visuelle Suche & Checkout ("Ausbuchen"):** Foto aufnehmen → Claude Haiku identifiziert das Teil → Abgleich mit Live-Inventar → direktes Ausbuchen der Menge; mobil-optimierte 3-Schritt-UI
 - **Export & Backup:** JSON-, XLSX- und ZIP-Vollbackup; automatisches nächtliches Backup (In-App-Scheduler, kein Cron/USB nötig) läuft nur, wenn sich `inventory.json` seit dem letzten Backup inhaltlich geändert hat; letzte 30 Backups werden aufbewahrt; Status auf der Settings-Seite sichtbar
 - **Settings-Seite** unter `/einstellungen`
+- **Login/Passwortschutz:** deaktiviert per Default (reine Heimnetz-Nutzung); sobald `APP_PASSWORT` in `.env` gesetzt ist, verlangt `app.py`s globaler `before_request`-Hook einen Login (`/login`, Session-Cookie, siehe `Config.SESSION_TAGE`). Nur relevant, wenn die App öffentlich erreichbar gemacht wird.
 
 ## Deployment
 
@@ -53,7 +55,12 @@ Diese Datei gibt Claude Code Kontext, wenn im Repo gearbeitet wird.
 4. Bei Code-Änderungen: `docker compose up -d --build` erneut ausführen (Volume mit `data/` bleibt erhalten)
 
 ### HTTPS für Kamerazugriff (optional)
-`getUserMedia` (Fotoaufnahme für Visual Search) verlangt im Browser einen sicheren Kontext. Im lokalen Netz per HTTP funktioniert weiterhin der Chrome-Flag-Workaround (siehe unten). Wer das vermeiden will: NAS-eigenen Reverse-Proxy (z. B. Synology "Anwendungsportal"/Reverse Proxy oder QNAP-Äquivalent) mit Let's-Encrypt- oder selbstsigniertem Zertifikat vor den Container schalten, der Container selbst bleibt HTTP-only auf Port 5000.
+`getUserMedia` (Fotoaufnahme für Visual Search) verlangt im Browser einen sicheren Kontext. Im lokalen Netz per HTTP funktioniert weiterhin der Chrome-Flag-Workaround (siehe unten). Wer das vermeiden will: NAS-eigenen Reverse-Proxy (z. B. Synology "Anwendungsportal"/Reverse Proxy oder QNAP-Äquivalent) mit Let's-Encrypt- oder selbstsigniertem Zertifikat vor den Container schalten, der Container selbst bleibt HTTP-only auf Port 5000. Alternativ den mitgelieferten Caddy-Proxy nutzen (siehe unten), der das gleich mitbringt.
+
+### Fernzugriff über das Internet (optional)
+Zwei Wege, ausführlich in README.md beschrieben:
+- **VPN (empfohlen für die meisten Fälle):** Tailscale oder NAS-eigener VPN-Server — App bleibt unverändert ohne Login, da nur VPN-Clients an Port 5000 kommen.
+- **Echte öffentliche Erreichbarkeit:** `APP_PASSWORT` + `PUBLIC_DOMAIN` in `.env` setzen, DDNS-Hostname einrichten (kein gekaufter Domainname nötig, z. B. NAS-eigenes DDNS oder DuckDNS), Router-Ports 80+443 auf den NAS weiterleiten, dann `docker compose --profile public up -d --build` — startet zusätzlich den Caddy-Container, der automatisch ein Let's-Encrypt-Zertifikat für `PUBLIC_DOMAIN` holt und an die App weiterleitet. Ohne `--profile public` läuft alles wie bisher nur im Heimnetz.
 
 ## Bekannte Eigenheiten
 

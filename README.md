@@ -52,6 +52,57 @@ git pull
 docker compose up -d --build
 ```
 
+## Fernzugriff über das Internet (optional)
+
+Standardmäßig ist die App nur im Heimnetz erreichbar und hat **kein Login** — das ist im
+WLAN zuhause unkritisch. Für den Zugriff von unterwegs gibt es zwei Wege:
+
+**Option A (empfohlen): VPN statt öffentlicher Freigabe** — z. B. [Tailscale](https://tailscale.com/)
+oder der VPN-Server des NAS-Herstellers. Dann bleibt die App unverändert ohne Login,
+da nur Geräte im VPN überhaupt an Port 5000 herankommen. Kein Portfreigabe, kein Zertifikat nötig.
+
+**Option B: echte öffentliche Erreichbarkeit** — dafür bringt dieses Repo einen optionalen
+[Caddy](https://caddyserver.com/)-Reverse-Proxy mit, der sich automatisch ein Let's-Encrypt-Zertifikat
+holt, plus einen Passwortschutz in der App selbst (ohne Passwort wäre das Inventar für jeden im
+Internet sichtbar und veränderbar, inklusive des kostenpflichtigen KI-Foto-Endpunkts).
+
+### 1. DDNS-Hostnamen einrichten
+
+Ein gekaufter Domainname ist **nicht nötig** — ein kostenloser DDNS-Hostname reicht, da Let's
+Encrypt nur einen Hostnamen braucht (keine nackte IP):
+
+- **NAS-eigenes DDNS** (Synology: *Systemsteuerung → Externer Zugriff → DDNS*, QNAP: *myQNAPcloud*)
+  — ergibt z. B. `deinname.synology.me`. Meist die einfachste Variante.
+  - **[DuckDNS](https://www.duckdns.org/)** — herstellerunabhängig, kostenlos, `deinname.duckdns.org`.
+
+### 2. Router-Portfreigabe
+
+Port **80** (nur für die Let's-Encrypt-Zertifikatsprüfung) und **443** (HTTPS) vom Router auf
+die interne IP des NAS weiterleiten. Port 5000 muss **nicht** weitergeleitet werden — der bleibt
+nur im Heimnetz erreichbar.
+
+### 3. `.env` ergänzen
+
+```
+APP_PASSWORT=<sicheres Passwort, z. B. via `openssl rand -base64 18`>
+PUBLIC_DOMAIN=deinname.duckdns.org
+```
+
+### 4. Mit Reverse-Proxy starten
+
+```bash
+docker compose --profile public up -d --build
+```
+
+Das startet zusätzlich zur App einen Caddy-Container, der `PUBLIC_DOMAIN` auf Port 443 mit
+automatischem HTTPS-Zertifikat bedient und intern an die App weiterleitet. Danach ist die App
+unter `https://deinname.duckdns.org` erreichbar (Login mit `APP_PASSWORT` erforderlich) —
+und weiterhin auch im Heimnetz direkt unter `http://<NAS-IP>:5000` (dort ebenfalls mit Login,
+sobald `APP_PASSWORT` gesetzt ist).
+
+**Zurück zu reiner Heimnetz-Nutzung:** `docker compose --profile public down` (stoppt nur den
+Caddy-Container) und `APP_PASSWORT` in der `.env` wieder leeren, um das Login abzuschalten.
+
 ## Setup für lokale Entwicklung (ohne Docker)
 
 ```bash

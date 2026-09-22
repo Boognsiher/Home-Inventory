@@ -7,8 +7,13 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-  <header class="app-header">
+  <header class="app-header" style="display:flex; align-items:center; justify-content:space-between;">
     <a href="{{ url_for('dashboard') }}" class="app-logo">🔧 Werkstatt Inventar</a>
+    {% if auth_aktiv %}
+      <form method="post" action="{{ url_for('logout') }}">
+        <button type="submit" class="btn btn-ghost btn-sm" style="padding: 0.3rem 0.6rem;">Abmelden</button>
+      </form>
+    {% endif %}
   </header>
 
   <main class="app-main">

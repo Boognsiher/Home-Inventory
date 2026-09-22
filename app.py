@@ -1,4 +1,5 @@
 import os
+import secrets as secrets_modul
 import threading
 import time
 from datetime import datetime, timedelta
@@ -9,7 +10,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, abort, send_file
+from flask import (
+    Flask, render_template, request, redirect, url_for, flash,
+    send_from_directory, abort, send_file, session,
+)
 from werkzeug.utils import secure_filename
 import qrcode
 
@@ -21,8 +25,52 @@ app = Flask(__name__)
 app.config.from_object(Config)
 app.secret_key = Config.SECRET_KEY
 app.config["MAX_CONTENT_LENGTH"] = Config.MAX_CONTENT_LENGTH
+app.permanent_session_lifetime = timedelta(days=Config.SESSION_TAGE)
 
 Config.ensure_dirs()
+
+
+# ---------------------------------------------------------------------------
+# Login (nur aktiv, wenn APP_PASSWORT gesetzt ist - siehe config.py)
+# ---------------------------------------------------------------------------
+
+OEFFENTLICHE_ENDPUNKTE = {"login", "static"}
+
+
+@app.before_request
+def login_erforderlich():
+    if not Config.APP_PASSWORT:
+        return  # kein Passwort konfiguriert -> reine Heimnetz-Nutzung, kein Login
+    endpoint = request.endpoint or ""
+    if endpoint in OEFFENTLICHE_ENDPUNKTE or endpoint.startswith("static"):
+        return
+    if not session.get("eingeloggt"):
+        return redirect(url_for("login", next=request.path))
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if not Config.APP_PASSWORT:
+        return redirect(url_for("dashboard"))
+
+    fehler = None
+    if request.method == "POST":
+        eingabe = request.form.get("passwort", "")
+        if secrets_modul.compare_digest(eingabe, Config.APP_PASSWORT):
+            session.clear()
+            session["eingeloggt"] = True
+            session.permanent = True
+            ziel = request.args.get("next") or url_for("dashboard")
+            return redirect(ziel)
+        fehler = "Falsches Passwort"
+
+    return render_template("login.html", fehler=fehler)
+
+
+@app.route("/logout", methods=["POST"])
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
 
 
 # ---------------------------------------------------------------------------
@@ -69,7 +117,7 @@ def format_datum(iso_str):
 
 @app.context_processor
 def globale_werte():
-    return {"jahr": datetime.now().year}
+    return {"jahr": datetime.now().year, "auth_aktiv": bool(Config.APP_PASSWORT)}
 
 
 @app.route("/uploads/<path:dateiname>")

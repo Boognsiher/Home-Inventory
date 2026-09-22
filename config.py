@@ -15,6 +15,14 @@ class Config:
     ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-bitte-aendern")
 
+    # Passwortschutz: nur aktiv, wenn gesetzt. Für reine Heimnetz-Nutzung kann
+    # das leer bleiben; bei Internet-Zugriff (siehe README) zwingend setzen.
+    APP_PASSWORT = os.environ.get("APP_PASSWORT", "")
+    SESSION_TAGE = int(os.environ.get("SESSION_TAGE", "30"))
+
+    # Nur relevant für den optionalen Caddy-Reverse-Proxy (öffentlicher Zugriff)
+    PUBLIC_DOMAIN = os.environ.get("PUBLIC_DOMAIN", "")
+
     DATA_DIR = Path(os.environ.get("DATA_DIR", str(BASE_DIR / "data")))
     UPLOAD_DIR = DATA_DIR / "uploads"
     BACKUP_DIR = DATA_DIR / "backups"
